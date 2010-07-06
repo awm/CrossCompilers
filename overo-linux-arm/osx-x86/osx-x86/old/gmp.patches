@@ -1,0 +1,5 @@
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/gmp/gmp-4.2.4/configure.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/gmp/gmp-4.2.4/amd64.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/gmp/files/sh4-asmfix.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/gmp/files/use-includedir.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/gmp/gmp-4.2.4/dont_use_mips_h_constraint.patch

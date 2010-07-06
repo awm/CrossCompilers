@@ -1,0 +1,8 @@
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/binutils-uclibc-100-uclibc-conf.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/110-arm-eabi-conf.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/binutils-uclibc-300-001_ld_makefile_patch.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/binutils-uclibc-300-006_better_file_error.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/binutils-uclibc-300-012_check_ldrunpath_length.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/binutils-uclibc-gas-needs-libm.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/binutils-x86_64_i386_biarch.patch
+http://gitorious.org/gumstix-oe/mainline/blobs/raw/overo/recipes/binutils/binutils-2.20.1/libtool-update.patch

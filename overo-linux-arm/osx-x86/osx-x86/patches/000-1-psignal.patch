@@ -1,0 +1,21 @@
+diff -urN gcc-4.5.0/libiberty/strsignal.c gcc-4.5.0-patched/libiberty/strsignal.c
+--- gcc-4.5.0/libiberty/strsignal.c	2008-06-19 08:08:53.000000000 -0700
++++ gcc-4.5.0-patched/libiberty/strsignal.c	2010-07-05 11:15:39.000000000 -0700
+@@ -538,7 +538,7 @@
+ 
+ /*
+ 
+-@deftypefn Supplemental void psignal (int @var{signo}, char *@var{message})
++@deftypefn Supplemental void psignal (int @var{signo}, const char *@var{message})
+ 
+ Print @var{message} to the standard error, followed by a colon,
+ followed by the description of the signal specified by @var{signo},
+@@ -551,7 +551,7 @@
+ #ifndef HAVE_PSIGNAL
+ 
+ void
+-psignal (int signo, char *message)
++psignal (int signo, const char *message)
+ {
+   if (signal_names == NULL)
+     {

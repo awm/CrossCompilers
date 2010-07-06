@@ -1,0 +1,232 @@
+
+### LIBRARY SETTINGS ###
+
+# common tools
+DLDR=wget
+
+# directories for various stages
+CC_ROOT=../../..
+DL_DIR=${CC_ROOT}/downloads
+SRC_DIR=source
+BUILD_DIR=build
+CROSS_BASE=/BuildTools
+
+# colours/formatting
+# reset
+RST=0
+# bright
+BRT=1
+# dim
+DIM=2
+# underline
+UDL=4
+# reverse video
+REV=7
+# forground (text) colours
+BLK=30
+RED=31
+GRN=32
+YLW=33
+BLU=34
+MAG=35
+CYN=36
+WHT=37
+# add 10 for background colours
+BG=10
+
+### LIBRARY FUNCTIONS ###
+
+# add colour/formatting, if terminal supports it
+#	Arguments:	colour/format values
+format() {
+	# default to reset
+	local CODE=${RST}
+	if [ -n "${1}" ]; then
+		CODE=${1}
+	fi
+   
+	# make sure terminal interprets ANSI codes
+	case "${TERM}" in
+		xterm* | [Ll]inux | ansi | vt10[02] )
+			echo -ne "\033[${CODE}m"
+			;;
+		cygwin )
+			case "${CODE}" in
+				${BLU} )
+					echo -ne "\033[${BRT};${CODE}m"
+					;;
+				* )
+					echo -ne "\033[${CODE}m"
+					;;
+			esac
+			;;
+		* )
+			;;
+	esac
+}
+
+# alias for format()
+#	Arguments:	colour/format values
+colour() {
+	format "${@}"
+}
+
+# simple error function; prints a message and exits
+#	Arguments:	error string
+abort() {
+	echo "`colour $RED`${*}`colour`"
+	exit 1
+}
+
+# displays a status message
+#	Arguments:	status string
+status() {
+	echo "`colour $BLU`${*}`colour`"
+}
+
+# displays a success message
+#	Arguments:	success string
+success() {
+	echo "`colour $GRN`${*}`colour`"
+}
+
+# check for necessary tools and files
+#	Arguments:	none
+check_prerequesites() {
+	if [ ! -x "${DLDR}" ]; then
+		if [ ! -x "`which ${DLDR}`" ]; then
+			abort "${DLDR} not found"
+		fi
+	fi
+	
+	if [ ! -d "${CROSS_BASE}" ]; then
+		abort "The '${CROSS_BASE}' directory does not exist"
+	fi
+	if [ ! -r "${CROSS_BASE}" ]; then
+		abort "The '${CROSS_BASE}' directory is not readable"
+	fi
+	if [ ! -w "${CROSS_BASE}" ]; then
+		abort "The '${CROSS_BASE}' directory is not writable"
+	fi
+	if [ ! -x "${CROSS_BASE}" ]; then
+		abort "The '${CROSS_BASE}' directory is not executable"
+	fi
+}
+
+# downloads a file only if it doesn't exist
+#	Arguments:	url, file to save as
+download() {
+	local URL=${1}
+	local FILE=`basename "${URL}"`
+	if [ "${#}" -eq 2 ]; then
+		FILE="${2}"
+	fi
+
+	if [ ! -s "${DL_DIR}/${FILE}" ]; then
+		status "Downloading ${URL}...."
+		if [ "${#}" -eq 2 ]; then
+			${DLDR} -t 3 -O ${DL_DIR}/${FILE} ${URL} || abort "Unable to download ${FILE}"
+		else
+			${DLDR} -t 3 -P ${DL_DIR} ${URL} || abort "Unable to download ${FILE}"
+		fi
+	fi
+}
+
+# download a list of patches to a directory
+#   Arguments: package name, list file
+download_patches() {
+    local PKG=${1}
+    local LIST=${2}
+    
+    cond_mkdir "${DL_DIR}/${PKG}-patches"
+    local I=0
+    while read P; do
+        if [ -n "${P}" ]; then
+            local URL=`echo "${P}" | awk '{ if (NF == 2) { print $2; } else { print $1; } }'`
+            local LEVEL=`echo "${P}" | awk '{ if (NF == 2) { print $1; } else { print "1"; } }'`
+            download "${URL}" "${PKG}-patches/`printf '%03d' ${I}`-${LEVEL}-`basename ${URL}`"
+            I=$(($I + 1))
+        fi
+    done < $LIST
+}
+
+# conditionally make directories
+#	Arguments:	directory
+cond_mkdir() {
+	[ -d "${1}" ] || mkdir -p "${1}"
+}
+
+# conditionally extract a file
+#	Arguments:	target directory, extracted directory, file
+cond_extract() {
+	local DIR="${SRC_DIR}/${1}"
+	local FILE="${DL_DIR}/${3}"
+	
+	case "${FILE}" in
+		*.tar.gz | *.tgz )
+			local EXTR_CMD="tar -xzC ${DIR} -f ${FILE}"
+			;;
+		*.tar.bz2 | *.tbz | *.tbz2 )
+			local EXTR_CMD="tar -xjC ${DIR} -f ${FILE}"
+			;;
+		*.zip )
+			local EXTR_CMD="unzip ${FILE} -d ${DIR}"
+			;;
+		* )
+			abort "Unrecognized file format: ${3}"
+			;;
+	esac
+	
+	if [ ! -d "${DIR}/${2}" ]; then
+		# extract file
+		status "Extracting ${3}...."
+		${EXTR_CMD} || abort "Failed to extract ${3}"
+	fi
+}
+
+# apply a list of patches to a directory
+#   Arguments: package name
+apply_patches() {
+    local PKG=${1}
+    
+    status "Applying ${PKG} patches...."
+    cond_mkdir "${SRC_DIR}/${PKG}-patched"
+    cd ${SRC_DIR}/${PKG}
+    for P in `ls ../../${DL_DIR}/${PKG}-patches/*`; do
+        local PATCH=`basename "${P}"`
+        local LEVEL=`echo "${PATCH}" | awk -F- '{ print $2; }'`
+        if [ ! -f "../${PKG}-patched/${PATCH}" ]; then
+            echo "patch -N -p${LEVEL} < ../../${DL_DIR}/${PKG}-patches/${PATCH}"
+            patch -N -p${LEVEL} < ../../${DL_DIR}/${PKG}-patches/${PATCH} || abort "Failed to apply ${PATCH}"
+            touch "../${PKG}-patched/${PATCH}"
+        fi
+    done
+    cd - > /dev/null
+}
+
+# clean a build
+#	Arguments: script arguments
+clean() {
+	echo -n "`colour $BLU`Cleaning... `colour`"
+
+	# remove cross directory
+	rm -Rf ${CROSS_DIR}
+
+	# remove stage directories
+	rm -Rf ${BUILD_DIR}
+	if [ "x${1}" = "x--source" ]; then
+		rm -Rf ${SRC_DIR}
+	elif [ "x${1}" = "x--all" ]; then
+		rm -Rf ${SRC_DIR}
+		rm -Rf ${DL_DIR}
+	fi
+
+	echo "`colour $GRN`done`colour`"
+}
+
+### DO NOT INVOKE DIRECTLY ###
+
+BASENAME="`basename ${0}`"
+if [ "${BASENAME}" = "cross_compilers.shlib" ]; then
+	abort "DO NOT INVOKE DIRECTLY"
+fi
