@@ -5,7 +5,7 @@ source "../../../cross_compilers.shlib"
 
 # set binutils, gcc, newlib versions
 BINUTILS_VERSION=2.20.1
-GCC_VERSION=4.5.0
+GCC_VERSION=4.3.3
 GMP_VERSION=5.0.1
 MPFR_VERSION=3.0.0
 MPC_VERSION=0.8.2
