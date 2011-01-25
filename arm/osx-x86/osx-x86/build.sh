@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) 2011 Andrew MacIsaac
+# License: MIT
+
 source "../../../cross_compilers.shlib"
 
 ### CONFIGURATION ###
@@ -7,13 +10,13 @@ source "../../../cross_compilers.shlib"
 ENABLE_CXX=0
 
 # set binutils, gcc, newlib versions
-BINUTILS_VERSION=2.20
-GCC_VERSION=4.5.0
+BINUTILS_VERSION=2.20.1
+GCC_VERSION=4.5.1
 GMP_VERSION=5.0.1
 MPFR_VERSION=3.0.0
 MPC_VERSION=0.8.2
 NEWLIB_VERSION=1.18.0
-GDB_VERSION=7.1
+GDB_VERSION=7.2
 
 # set CFLAGS
 BINUTILS_CFLAGS=""
@@ -30,7 +33,6 @@ CROSS_DIR=${CROSS_BASE}/arm
 # set package names
 BINUTILS_PACKAGE=binutils-${BINUTILS_VERSION}
 GCC_PACKAGE=gcc-${GCC_VERSION}
-GXX_PACKAGE=g++-${GCC_VERSION}
 GMP_PACKAGE=gmp-${GMP_VERSION}
 MPFR_PACKAGE=mpfr-${MPFR_VERSION}
 MPC_PACKAGE=mpc-${MPC_VERSION}
@@ -39,19 +41,17 @@ GDB_PACKAGE=gdb-${GDB_VERSION}
 
 # set download file names
 BINUTILS_FILE=${BINUTILS_PACKAGE}.tar.bz2
-GCC_FILE=gcc-core-${GCC_VERSION}.tar.bz2
-GXX_FILE=gcc-g++-${GCC_VERSION}.tar.bz2
+GCC_FILE=gcc-${GCC_VERSION}.tar.bz2
 GMP_FILE=${GMP_PACKAGE}.tar.bz2
 MPFR_FILE=${MPFR_PACKAGE}.tar.bz2
 MPC_FILE=${MPC_PACKAGE}.tar.gz
 NEWLIB_FILE=${NEWLIB_PACKAGE}.tar.gz
 GDB_FILE=${GDB_PACKAGE}.tar.bz2
-T_ARM_ELF_FILE=t-arm-elf
+# T_ARM_ELF_FILE=t-arm-elf
 
 # set download URLs
 BINUTILS_URL="http://ftp.gnu.org/gnu/binutils/${BINUTILS_FILE}"
 GCC_URL="http://ftp.gnu.org/gnu/gcc/${GCC_PACKAGE}/${GCC_FILE}"
-GXX_URL="http://ftp.gnu.org/gnu/gcc/${GCC_PACKAGE}/${GXX_FILE}"
 GMP_URL="ftp://ftp.gnu.org/gnu/gmp/${GMP_FILE}"
 MPFR_URL="http://www.mpfr.org/mpfr-current/${MPFR_FILE}"
 MPC_URL="http://www.multiprecision.org/mpc/download/${MPC_FILE}"
@@ -79,9 +79,6 @@ cond_mkdir "${CROSS_DIR}/usr"
 status "Downloading packages (if needed)...."
 download "${BINUTILS_URL}"
 download "${GCC_URL}"
-if [ ${ENABLE_CXX} -ne 0 ]; then
-	download "${GXX_URL}"
-fi
 download "${GMP_URL}"
 download "${MPFR_URL}"
 download "${MPC_URL}"
@@ -135,9 +132,9 @@ fi
 cond_extract "" "${GCC_PACKAGE}" "${GCC_FILE}"
 
 # enable additional gcc arm options
-status "Enabling additional GCC ARM library options...."
+# status "Enabling additional GCC ARM library options...."
 # enable multilib options
-cp ${T_ARM_ELF_FILE} ${SRC_DIR}/${GCC_PACKAGE}/gcc/config/arm/${T_ARM_ELF_FILE} || abort "Failed to enable options"
+# cp ${T_ARM_ELF_FILE} ${SRC_DIR}/${GCC_PACKAGE}/gcc/config/arm/${T_ARM_ELF_FILE} || abort "Failed to enable options"
 
 # create library links
 status "Creating numeric library links...."
@@ -190,9 +187,6 @@ cd ${BUILD_DIR}/${NEWLIB_PACKAGE}
 cd - > /dev/null
 
 if [ ${ENABLE_CXX} -ne 0 ]; then
-	# only extract g++ if not done
-	cond_extract "" "${GCC_PACKAGE}/libstdc++-v3" "${GXX_FILE}"
-
 	# build gcc/g++
 	status "Building '${GCC_PACKAGE}'...."
 	cd ${BUILD_DIR}/${GCC_PACKAGE}

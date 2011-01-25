@@ -1,3 +1,6 @@
+.source/
+.build/
+.downloads/
 source/
 build/
 downloads/

@@ -7,7 +7,7 @@ source "../../../cross_compilers.shlib"
 ### CONFIGURATION ###
 
 # finished cross-compiler root directory
-CROSS_DIR="`pwd`/install"
+CROSS_DIR=${CROSS_BASE}/m68k
 
 ### CLEANING PROCESS ###
 clean "${@}"

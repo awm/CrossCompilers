@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) 2011 Andrew MacIsaac
+# License: MIT
+
 source "../../../cross_compilers.shlib"
 
 ### CONFIGURATION ###

@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Andrew MacIsaac
+# License: MIT
 
 ### LIBRARY SETTINGS ###
 
@@ -7,8 +9,8 @@ DLDR=wget
 # directories for various stages
 CC_ROOT=../../..
 DL_DIR=${CC_ROOT}/downloads
-SRC_DIR=source
-BUILD_DIR=build
+SRC_DIR=.source
+BUILD_DIR=.build
 CROSS_BASE=/BuildTools
 
 # colours/formatting
