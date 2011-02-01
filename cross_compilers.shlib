@@ -5,13 +5,19 @@
 
 # common tools
 DLDR=wget
+SAY=nop
+if [ "`uname`" = "Darwin" ]; then
+	SAY=say
+fi
 
 # directories for various stages
 CC_ROOT=../../..
 DL_DIR=${CC_ROOT}/downloads
+TEST_SRC_DIR=${CC_ROOT}/test
 SRC_DIR=.source
 BUILD_DIR=.build
-CROSS_BASE=/BuildTools
+TEST_DIR=.test
+CROSS_BASE=/cross
 
 # colours/formatting
 # reset
@@ -37,6 +43,11 @@ WHT=37
 BG=10
 
 ### LIBRARY FUNCTIONS ###
+
+# do nothing
+nop() {
+	return
+}
 
 # add colour/formatting, if terminal supports it
 #	Arguments:	colour/format values
@@ -77,6 +88,7 @@ colour() {
 #	Arguments:	error string
 abort() {
 	echo "`colour $RED`${*}`colour`"
+	${SAY} "Error: ${*}!"
 	exit 1
 }
 
@@ -84,12 +96,14 @@ abort() {
 #	Arguments:	status string
 status() {
 	echo "`colour $BLU`${*}`colour`"
+	${SAY} "${*}"
 }
 
 # displays a success message
 #	Arguments:	success string
 success() {
 	echo "`colour $GRN`${*}`colour`"
+	${SAY} "${*}"
 }
 
 # check for necessary tools and files
@@ -210,6 +224,7 @@ apply_patches() {
 #	Arguments: script arguments
 clean() {
 	echo -n "`colour $BLU`Cleaning... `colour`"
+	${SAY} "Cleaning... "
 
 	# remove cross directory
 	rm -Rf ${CROSS_DIR}
@@ -224,6 +239,7 @@ clean() {
 	fi
 
 	echo "`colour $GRN`done`colour`"
+	${SAY} "done"
 }
 
 ### DO NOT INVOKE DIRECTLY ###
