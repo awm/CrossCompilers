@@ -101,16 +101,6 @@ cd - > /dev/null
 # only extract angstrom toolchain if not done
 cond_extract "" "${ANGSTROM_TOOLCHAIN_PACKAGE}" "${ANGSTROM_TOOLCHAIN_FILE}"
 
-# eliminate symbolic links
-status "Eliminating symbolic links in ${ANGSTROM_TOOLCHAIN_PACKAGE}...."
-cd ${SRC_DIR}/${ANGSTROM_TOOLCHAIN_PACKAGE}
-for l in `find . -type l -print`; do
-	t="`dirname ${l}`/`ls -o ${l} | awk '{ print $10 }'`"
-	rm -f ${l}
-	cp -pvf ${t} ${l}
-done
-cd - > /dev/null
-
 # only copy angstrom files if not done
 if [ ! -f "${CROSS_DIR}/lib/libc-2.12.1.so" ]; then
 	# copy includes
