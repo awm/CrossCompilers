@@ -6,16 +6,13 @@ source "../../../cross_compilers.shlib"
 
 ### CONFIGURATION ###
 
-# set whether of not to enable C++ support
-ENABLE_CXX=0
-
 # set binutils, gcc, newlib versions
-BINUTILS_VERSION=2.20.1
-GCC_VERSION=4.5.1
+BINUTILS_VERSION=2.21
+GCC_VERSION=4.5.2
 GMP_VERSION=5.0.1
 MPFR_VERSION=3.0.0
 MPC_VERSION=0.8.2
-NEWLIB_VERSION=1.18.0
+NEWLIB_VERSION=1.19.0
 GDB_VERSION=7.2
 
 # set CFLAGS
@@ -26,6 +23,9 @@ GDB_CFLAGS=""
 
 # target system
 TARGET_SYSTEM=arm-elf-eabi
+
+# languages
+LANGUAGES="c"
 
 # finished cross-compiler root directory
 CROSS_DIR=${CROSS_BASE}/arm
@@ -47,7 +47,6 @@ MPFR_FILE=${MPFR_PACKAGE}.tar.bz2
 MPC_FILE=${MPC_PACKAGE}.tar.gz
 NEWLIB_FILE=${NEWLIB_PACKAGE}.tar.gz
 GDB_FILE=${GDB_PACKAGE}.tar.bz2
-# T_ARM_ELF_FILE=t-arm-elf
 
 # set download URLs
 BINUTILS_URL="http://ftp.gnu.org/gnu/binutils/${BINUTILS_FILE}"
@@ -60,6 +59,7 @@ GDB_URL="http://ftp.gnu.org/gnu/gdb/${GDB_FILE}"
 
 ### BUILD PROCESS ###
 status "BUILDING OS X TO ARM CROSS COMPILER...."
+START_TIME=`date +%s`
 check_prerequesites
 
 # create some needed directories
@@ -68,6 +68,7 @@ status "Creating directories...."
 cond_mkdir "${CROSS_DIR}"
 cond_mkdir "${DL_DIR}"
 cond_mkdir "${SRC_DIR}"
+cond_mkdir "${TEST_DIR}"
 cond_mkdir "${BUILD_DIR}/${BINUTILS_PACKAGE}"
 cond_mkdir "${BUILD_DIR}/${NEWLIB_PACKAGE}"
 cond_mkdir "${BUILD_DIR}/${GDB_PACKAGE}"
@@ -131,11 +132,6 @@ fi
 # only extract gcc if not done
 cond_extract "" "${GCC_PACKAGE}" "${GCC_FILE}"
 
-# enable additional gcc arm options
-# status "Enabling additional GCC ARM library options...."
-# enable multilib options
-# cp ${T_ARM_ELF_FILE} ${SRC_DIR}/${GCC_PACKAGE}/gcc/config/arm/${T_ARM_ELF_FILE} || abort "Failed to enable options"
-
 # create library links
 status "Creating numeric library links...."
 cd ${SRC_DIR}/${GCC_PACKAGE}
@@ -150,20 +146,20 @@ export CPPFLAGS="-I`pwd`/${SRC_DIR}/${GMP_PACKAGE}"
 status "Building bootstrapping compiler...."
 cd ${BUILD_DIR}/${GCC_PACKAGE}-bootstrap
 [ -f Makefile ] ||
-	../../${SRC_DIR}/${GCC_PACKAGE}/configure	    \
-						--prefix=${CROSS_DIR}	    \
-						--with-sysroot=${CROSS_DIR} \
-						--target=${TARGET_SYSTEM}   \
-						--with-gcc				    \
-						--with-gnu-as			    \
-						--with-gnu-ld			    \
-						--disable-nls			    \
-						--enable-languages=c	    \
-						--enable-interwork		    \
-						--disable-shared		    \
-						--with-float=soft		    \
-						--with-newlib			    \
-						--enable-multilib		    \
+	../../${SRC_DIR}/${GCC_PACKAGE}/configure	   	\
+						--prefix=${CROSS_DIR}	   	\
+						--with-sysroot=${CROSS_DIR}	\
+						--target=${TARGET_SYSTEM}  	\
+						--with-gcc				   	\
+						--with-gnu-as			   	\
+						--with-gnu-ld			   	\
+						--disable-nls			   	\
+						--enable-languages=c		\
+						--enable-interwork			\
+						--disable-shared			\
+						--with-float=soft			\
+						--with-newlib				\
+						--enable-multilib			\
 						--disable-threads		    ||
 	abort "Failed to configure bootstrapping compiler"
 [ -f "gcc/gcc" ] || make CFLAGS="${GCC_CFLAGS}" || abort "Failed to build bootstrapping compiler"
@@ -186,52 +182,34 @@ cd ${BUILD_DIR}/${NEWLIB_PACKAGE}
 [ -f "${CROSS_DIR}/${TARGET_SYSTEM}/lib/libc.a" ] || make install || abort "Failed to install ${NEWLIB_PACKAGE}"
 cd - > /dev/null
 
-if [ ${ENABLE_CXX} -ne 0 ]; then
-	# build gcc/g++
-	status "Building '${GCC_PACKAGE}'...."
-	cd ${BUILD_DIR}/${GCC_PACKAGE}
-	[ -f Makefile ] ||
-		../../${SRC_DIR}/${GCC_PACKAGE}/configure		\
-							--prefix=${CROSS_DIR}		\
-							--with-sysroot=${CROSS_DIR} \
-							--target=${TARGET_SYSTEM}	\
-							--with-gcc					\
-							--with-gnu-as				\
-							--with-gnu-ld				\
-							--disable-nls				\
-							--enable-languages=c,c++	\
-							--enable-interwork			\
-							--with-float=soft			\
-							--with-newlib				\
-							--enable-multilib			\
-							--disable-threads			||
-		abort "Failed to configure '${GCC_PACKAGE}'"
-	[ -f "gcc/g++" ] || make CFLAGS="${GCC_CFLAGS}" || abort "Failed to build '${GCC_PACKAGE}'"
-	[ -x "${CROSS_DIR}/bin/${TARGET_SYSTEM}-g++" ] || make install || abort "Failed to install '${GCC_PACKAGE}'"
-else
-	# build gcc
-	status "Building '${GCC_PACKAGE}'...."
-	cd ${BUILD_DIR}/${GCC_PACKAGE}
-	[ -f Makefile ] ||
-		../../${SRC_DIR}/${GCC_PACKAGE}/configure		\
-							--prefix=${CROSS_DIR}		\
-							--with-sysroot=${CROSS_DIR} \
-							--target=${TARGET_SYSTEM}	\
-							--with-gcc					\
-							--with-gnu-as				\
-							--with-gnu-ld				\
-							--disable-nls				\
-							--enable-languages=c		\
-							--enable-interwork			\
-							--with-float=soft			\
-							--with-newlib				\
-							--enable-multilib			\
-							--disable-threads			||
-		abort "Failed to configure '${GCC_PACKAGE}'"
-	[ -f "gcc/gcc" ] || make CFLAGS="${GCC_CFLAGS}" || abort "Failed to build '${GCC_PACKAGE}'"
-	make install || abort "Failed to install '${GCC_PACKAGE}'"
-fi
+# build gcc
+status "Building '${GCC_PACKAGE}'...."
+cd ${BUILD_DIR}/${GCC_PACKAGE}
+[ -f Makefile ] ||
+	../../${SRC_DIR}/${GCC_PACKAGE}/configure			\
+						--prefix=${CROSS_DIR}			\
+						--with-sysroot=${CROSS_DIR} 	\
+						--target=${TARGET_SYSTEM}		\
+						--with-gcc						\
+						--with-gnu-as					\
+						--with-gnu-ld					\
+						--disable-nls					\
+						--enable-languages=${LANGUAGES}	\
+						--enable-interwork				\
+						--with-float=soft				\
+						--with-newlib					\
+						--enable-multilib				\
+						--disable-threads				||
+	abort "Failed to configure '${GCC_PACKAGE}'"
+[ -f "gcc/gcc" ] || make CFLAGS="${GCC_CFLAGS}" || abort "Failed to build '${GCC_PACKAGE}'"
+make install || abort "Failed to install '${GCC_PACKAGE}'"
 cd - > /dev/null
+
+# test new compiler
+status "Testing compiler...."
+${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test.c" -mthumb -mcpu=cortex-m0 -o "${TEST_DIR}/test_cm0-c" || abort "C test compilation failed"
+${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test.c" -mcpu=arm926ej-s -o "${TEST_DIR}/test_arm9-c" || abort "C test compilation failed"
+${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test.c" -mcpu=arm7tdmi -o "${TEST_DIR}/test_arm7-c" || abort "C test compilation failed"
 
 # only extract gdb if not done
 cond_extract "" "${GDB_PACKAGE}" "${GDB_FILE}"
@@ -254,6 +232,10 @@ cd ${BUILD_DIR}/${GDB_PACKAGE}
 cd - > /dev/null
 
 # all done
+END_TIME=`date +%s`
+ELAPSED_TIME=$((${END_TIME} - ${START_TIME}))
+ELAPSED_TIME_MIN=$(((${ELAPSED_TIME} + 30) / 60))
 success "OS X TO ARM CROSS COMPILER BUILT IN '${CROSS_DIR}'"
-success "Total Size: "`du -hc ${CROSS_DIR} | grep 'total' | awk '{ print $1; }'`
+success "Total Size: `du -hsc ${CROSS_DIR} | grep 'total' | awk '{ print $1; }'`"
+success "Elapsed Time: ${ELAPSED_TIME} seconds (${ELAPSED_TIME_MIN} minutes)"
 exit 0
