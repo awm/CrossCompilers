@@ -8,10 +8,10 @@ source "../../../cross_compilers.shlib"
 
 # set binutils, gcc, newlib versions
 BINUTILS_VERSION=2.21
-GCC_VERSION=4.5.2
-GMP_VERSION=5.0.1
-MPFR_VERSION=3.0.0
-MPC_VERSION=0.8.2
+GCC_VERSION=4.5.3
+GMP_VERSION=5.0.2
+MPFR_VERSION=3.0.1
+MPC_VERSION=0.9
 NEWLIB_VERSION=1.19.0
 GDB_VERSION=7.2
 
@@ -79,6 +79,7 @@ cond_mkdir "${CROSS_DIR}/usr"
 # download the needed packages
 status "Downloading packages (if needed)...."
 download "${BINUTILS_URL}"
+download_patches "${BINUTILS_PACKAGE}" binutils-patches.txt
 download "${GCC_URL}"
 download "${GMP_URL}"
 download "${MPFR_URL}"
@@ -88,6 +89,8 @@ download "${GDB_URL}"
 
 # only extract binutils if needed
 cond_extract "" "${BINUTILS_PACKAGE}" "${BINUTILS_FILE}"
+
+apply_patches $BINUTILS_PACKAGE
 
 # build binutils
 status "Building ${BINUTILS_PACKAGE}...."
@@ -143,44 +146,7 @@ cd - > /dev/null
 # needed for MPFR to find GMP internal headers
 export CPPFLAGS="-I`pwd`/${SRC_DIR}/${GMP_PACKAGE}"
 
-status "Building bootstrapping compiler...."
-cd ${BUILD_DIR}/${GCC_PACKAGE}-bootstrap
-[ -f Makefile ] ||
-	../../${SRC_DIR}/${GCC_PACKAGE}/configure	   	\
-						--prefix=${CROSS_DIR}	   	\
-						--with-sysroot=${CROSS_DIR}	\
-						--target=${TARGET_SYSTEM}  	\
-						--with-gcc				   	\
-						--with-gnu-as			   	\
-						--with-gnu-ld			   	\
-						--disable-nls			   	\
-						--enable-languages=c		\
-						--enable-interwork			\
-						--disable-shared			\
-						--with-float=soft			\
-						--with-newlib				\
-						--enable-multilib			\
-						--disable-threads		    ||
-	abort "Failed to configure bootstrapping compiler"
-[ -f "gcc/gcc" ] || make CFLAGS="${GCC_CFLAGS}" || abort "Failed to build bootstrapping compiler"
-[ -x "${CROSS_DIR}/bin/${TARGET_SYSTEM}-gcc" ] || make install || abort "Failed to install bootstrapping compiler"
-export PATH="${PATH}:${CROSS_DIR}/bin"
-cd - > /dev/null
-
-status "Building ${NEWLIB_PACKAGE}...."
-cd ${BUILD_DIR}/${NEWLIB_PACKAGE}
-[ -f Makefile ] ||
-	../../${SRC_DIR}/${NEWLIB_PACKAGE}/configure	\
-						--prefix=${CROSS_DIR}		\
-						--target=${TARGET_SYSTEM}	\
-						--enable-interwork			\
-						--disable-shared			\
-						--with-float=soft			\
-						--enable-multilib			||
-	abort "Failed to configure ${NEWLIB_PACKAGE}"
-[ -f "${TARGET_SYSTEM}/newlib/libc.a" ] || make CFLAGS="${NEWLIB_CFLAGS}" || abort "Failed to build ${NEWLIB_PACKAGE}"
-[ -f "${CROSS_DIR}/${TARGET_SYSTEM}/lib/libc.a" ] || make install || abort "Failed to install ${NEWLIB_PACKAGE}"
-cd - > /dev/null
+apply_patches $GCC_PACKAGE
 
 # build gcc
 status "Building '${GCC_PACKAGE}'...."
@@ -188,7 +154,6 @@ cd ${BUILD_DIR}/${GCC_PACKAGE}
 [ -f Makefile ] ||
 	../../${SRC_DIR}/${GCC_PACKAGE}/configure			\
 						--prefix=${CROSS_DIR}			\
-						--with-sysroot=${CROSS_DIR} 	\
 						--target=${TARGET_SYSTEM}		\
 						--with-gcc						\
 						--with-gnu-as					\
@@ -197,9 +162,10 @@ cd ${BUILD_DIR}/${GCC_PACKAGE}
 						--enable-languages=${LANGUAGES}	\
 						--enable-interwork				\
 						--with-float=soft				\
-						--with-newlib					\
 						--enable-multilib				\
-						--disable-threads				||
+						--disable-threads				\
+						--without-headers				\
+						--disable-libssp				||
 	abort "Failed to configure '${GCC_PACKAGE}'"
 [ -f "gcc/gcc" ] || make CFLAGS="${GCC_CFLAGS}" || abort "Failed to build '${GCC_PACKAGE}'"
 make install || abort "Failed to install '${GCC_PACKAGE}'"
@@ -207,9 +173,9 @@ cd - > /dev/null
 
 # test new compiler
 status "Testing compiler...."
-${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test.c" -mthumb -mcpu=cortex-m0 -o "${TEST_DIR}/test_cm0-c" || abort "C test compilation failed"
-${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test.c" -mcpu=arm926ej-s -o "${TEST_DIR}/test_arm9-c" || abort "C test compilation failed"
-${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test.c" -mcpu=arm7tdmi -o "${TEST_DIR}/test_arm7-c" || abort "C test compilation failed"
+${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test_nolibc.c" -nostartfiles -nostdlib -mthumb -mcpu=cortex-m0 -o "${TEST_DIR}/test_cm0-c" || abort "C test compilation failed"
+${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test_nolibc.c" -nostartfiles -nostdlib -mcpu=arm926ej-s -o "${TEST_DIR}/test_arm9-c" || abort "C test compilation failed"
+${TARGET_SYSTEM}-gcc "${TEST_SRC_DIR}/test_nolibc.c" -nostartfiles -nostdlib -mcpu=arm7tdmi -o "${TEST_DIR}/test_arm7-c" || abort "C test compilation failed"
 
 # only extract gdb if not done
 cond_extract "" "${GDB_PACKAGE}" "${GDB_FILE}"

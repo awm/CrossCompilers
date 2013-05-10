@@ -5,3 +5,5 @@
 /angstrom-linux-arm/win32-x86/osx-x86/angstrom-linux-arm/
 
 !.gitignore
+
+*.sublime_workspace

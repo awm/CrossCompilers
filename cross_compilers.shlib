@@ -17,7 +17,9 @@ TEST_SRC_DIR=${CC_ROOT}/test
 SRC_DIR=.source
 BUILD_DIR=.build
 TEST_DIR=.test
-CROSS_BASE=/cross
+if [ -z "$CROSS_BASE" ]; then
+	CROSS_BASE=/BuildTools
+fi
 
 # colours/formatting
 # reset
@@ -57,7 +59,7 @@ format() {
 	if [ -n "${1}" ]; then
 		CODE=${1}
 	fi
-   
+
 	# make sure terminal interprets ANSI codes
 	case "${TERM}" in
 		xterm* | [Ll]inux | ansi | vt10[02] )
@@ -114,7 +116,7 @@ check_prerequesites() {
 			abort "${DLDR} not found"
 		fi
 	fi
-	
+
 	if [ ! -d "${CROSS_BASE}" ]; then
 		abort "The '${CROSS_BASE}' directory does not exist"
 	fi
@@ -153,14 +155,16 @@ download() {
 download_patches() {
     local PKG=${1}
     local LIST=${2}
-    
+
     cond_mkdir "${DL_DIR}/${PKG}-patches"
     local I=0
     while read P; do
         if [ -n "${P}" ]; then
-            local URL=`echo "${P}" | awk '{ if (NF == 2) { print $2; } else { print $1; } }'`
-            local LEVEL=`echo "${P}" | awk '{ if (NF == 2) { print $1; } else { print "1"; } }'`
-            download "${URL}" "${PKG}-patches/`printf '%03d' ${I}`-${LEVEL}-`basename ${URL}`"
+        	if [ "${P:1:1}" != "#" ]; then
+        		local URL=`echo "${P}" | awk '{ if (NF == 2) { print $2; } else { print $1; } }'`
+            	local LEVEL=`echo "${P}" | awk '{ if (NF == 2) { print $1; } else { print "1"; } }'`
+            	download "${URL}" "${PKG}-patches/`printf '%03d' ${I}`-${LEVEL}-`basename ${URL}`"
+        	fi
             I=$(($I + 1))
         fi
     done < $LIST
@@ -177,7 +181,7 @@ cond_mkdir() {
 cond_extract() {
 	local DIR="${SRC_DIR}/${1}"
 	local FILE="${DL_DIR}/${3}"
-	
+
 	case "${FILE}" in
 		*.tar.gz | *.tgz )
 			local EXTR_CMD="tar -xzC ${DIR} -f ${FILE}"
@@ -192,7 +196,7 @@ cond_extract() {
 			abort "Unrecognized file format: ${3}"
 			;;
 	esac
-	
+
 	if [ ! -d "${DIR}/${2}" ]; then
 		# extract file
 		status "Extracting ${3}...."
@@ -204,19 +208,23 @@ cond_extract() {
 #   Arguments: package name
 apply_patches() {
     local PKG=${1}
-    
+
     status "Applying ${PKG} patches...."
     cond_mkdir "${SRC_DIR}/${PKG}-patched"
     cd ${SRC_DIR}/${PKG}
-    for P in `ls ../../${DL_DIR}/${PKG}-patches/*`; do
-        local PATCH=`basename "${P}"`
-        local LEVEL=`echo "${PATCH}" | awk -F- '{ print $2; }'`
-        if [ ! -f "../${PKG}-patched/${PATCH}" ]; then
-            echo "patch -N -p${LEVEL} < ../../${DL_DIR}/${PKG}-patches/${PATCH}"
-            patch -N -p${LEVEL} < ../../${DL_DIR}/${PKG}-patches/${PATCH} || abort "Failed to apply ${PATCH}"
-            touch "../${PKG}-patched/${PATCH}"
-        fi
-    done
+	for D in "../../${DL_DIR}/${PKG}-patches" "../../patches/${PKG}"; do
+		if [ -d "${D}" ]; then
+    		for P in `ls ${D}/*`; do
+		        local PATCH=`basename "${P}"`
+		        local LEVEL=`echo "${PATCH}" | awk -F- '{ print $2; }'`
+		        if [ ! -f "../${PKG}-patched/${PATCH}" ]; then
+		            echo "patch -N -p${LEVEL} < ${P}"
+		            patch -N -p${LEVEL} < "${P}" || abort "Failed to apply ${PATCH}"
+		            touch "../${PKG}-patched/${PATCH}"
+		        fi
+		    done
+		fi
+	done
     cd - > /dev/null
 }
 
@@ -240,6 +248,12 @@ clean() {
 
 	echo "`colour $GRN`done`colour`"
 	${SAY} "done"
+}
+
+# create a symbolic link
+#	Arguments: target, link name
+make_symlink() {
+	ln -sv "$1" "$2"
 }
 
 ### DO NOT INVOKE DIRECTLY ###
